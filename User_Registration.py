@@ -56,4 +56,4 @@ if submitted:
         st.session_state["user_name"] = name
         st.session_state["user_gender"] = gender
         st.session_state["user_age"] = age
-        st.switch_page("pages\\Dashboard.py")
+        st.switch_page("pages/Dashboard.py")
