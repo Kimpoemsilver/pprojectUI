@@ -184,9 +184,9 @@ st.markdown("""
 
 
 # -------더미 변수-------
-stress_trend = [300, 311, 210, 256, 278]  
+stress_trend = [300, 311, 210, 256, 329]  
 dates = ["12월 01일", "12월 03일", "12월 05일", "12월 07일", "12월 09일"]
-change_rate = 17.4 
+change_rate = 17.0
 
 # 5회 측정 그래프
 df = pd.DataFrame({
