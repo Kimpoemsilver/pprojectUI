@@ -5,6 +5,8 @@ from matplotlib.patches import Wedge, Arc, Circle
 import pandas as pd
 import plotly.express as px
 import matplotlib as mpl
+from openai import OpenAI
+
 
 mpl.rcParams["font.family"] = "Malgun Gothic"  # 윈도우 한글 폰트
 mpl.rcParams["axes.unicode_minus"] = False  
@@ -239,18 +241,84 @@ with stat_col:
 
 
 # 결과 해석 링크 / 지피티 연결하기
+if "OPENAI_API_KEY" not in st.secrets:
+    st.error("OPENAI_API_KEY가 Secrets에 없습니다. Streamlit Cloud > Secrets 설정을 확인하세요.")
+    client = None
+else:
+    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
+def build_gpt_prompt(
+    user_name: str,
+    stress_level: str,
+    stress_score: float,
+    stress_trend: list,
+    dates: list,
+    change_rate: float
+) -> str:
+    return f"""
+너는 스트레스 측정 결과를 사용자가 이해하기 쉬운 한국어로 설명("~입니다."의 문체 사용)하는 도우미야. 
+과장하거나 진단하지 말고, 안전하고 현실적인 조언을 제공해줘. 
+
+아래 형식으로 답변해줘:
+1) 한 줄 요약(1문장)
+2) 현재 상태 해석(2~3문장)
+3) 추이 해석(2~3문장)
+4) 오늘 할 수 있는 행동 3가지(불릿 3개)
+5) 주의가 필요한 경우(1~2문장)
+
+[사용자]
+이름: {user_name}
+
+[결과]
+스트레스 레벨: {stress_level}
+스트레스 점수(SI): {stress_score} (범위 0~1500)
+최근 5회 추이: {list(zip(dates, stress_trend))}
+평균 대비 변화율: {change_rate:.1f}%
+""".strip()
+
+# 버튼 스타일
 st.markdown("""
 <style>
-.result-button {
-    font-size: 20px;
-    font-weight: 600;
-    color: black;
-    text-align: right;
+.result-button-wrap {
+    display:flex;
+    justify-content:flex-end;
 }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<div class='result-button'>결과 해석 바로가기 ➜</div>", unsafe_allow_html=True)
 
-
+st.markdown("<div class='result-button-wrap'>", unsafe_allow_html=True)
+run_gpt = st.button("결과 해석 바로가기 ➜")
 st.markdown("</div>", unsafe_allow_html=True)
+
+result_area = st.empty()  # 버튼 눌렀을 때 같은 위치에 결과 표시
+
+# 버튼 눌렀을 때만 GPT 호출
+if run_gpt:
+    if client is None:
+        result_area.error("GPT 해석을 위한 API 키가 설정되지 않았습니다. Secrets를 확인하세요.")
+    else:
+        prompt = build_gpt_prompt(
+            user_name=user_name,
+            stress_level=stress_level,
+            stress_score=stress_score,
+            stress_trend=stress_trend,
+            dates=dates,
+            change_rate=change_rate
+        )
+
+        with st.spinner("결과를 해석 중입니다..."):
+            try:
+                res = client.chat.completions.create(
+                    model="gpt-4.1-mini",
+                    messages=[
+                        {"role": "system", "content": "너는 친절하고 차분한 스트레스 결과 해석 도우미입니다."},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.4,
+                )
+                answer = res.choices[0].message.content
+                result_area.markdown("### 📌 결과 해석\n\n" + answer)
+            except Exception as e:
+                result_area.error("GPT 해석 생성 중 오류가 발생했습니다. (API 키/모델/requirements 확인)")
+                result_area.exception(e)
