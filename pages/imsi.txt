@@ -1,0 +1,47 @@
+START
+
+1. Load training data
+   - Read "train.csv" into a DataFrame called train
+
+2. Encode target labels
+   - Apply LabelEncoder to the "condition" column
+   - Convert stress labels into numeric classes (0, 1, 2)
+
+3. Compute correlation matrix
+   - Calculate the correlation matrix of train
+   - Visualize the matrix using a heatmap
+
+4. Feature selection based on correlation
+   - Set correlation threshold = 0.1
+   - For each feature:
+       If correlation with "condition" > threshold,
+       select the feature
+   - Create reduced_train using selected features
+   - Set X_train = reduced_train
+   - Set y_train = train["condition"]
+
+5. Train the classification model
+   - Initialize RandomForestClassifier
+   - Train the model using X_train and y_train
+
+6. Load and preprocess new input data
+   - Read "hrv_output.txt" as new_data (space-separated)
+   - Use the first column as feature names
+   - Transpose the data to match training format
+   - Select the same feature columns as X_train
+   - Convert all values to float
+
+7. Predict stress condition
+   - predicted_condition = model.predict(new_data)
+   - Extract the first predicted value as an integer
+
+8. Convert numeric prediction to stress level
+   IF predicted_condition == 0 THEN stress_level = "low"
+   ELSE IF predicted_condition == 1 THEN stress_level = "average"
+   ELSE IF predicted_condition == 2 THEN stress_level = "high"
+   ELSE stress_level = "unknown"
+
+9. Output results
+   - Print the numeric stress condition
+   - Print the corresponding stress level label
+END

@@ -241,84 +241,84 @@ with stat_col:
 
 
 # 결과 해석 링크 / 지피티 연결하기
-if "OPENAI_API_KEY" not in st.secrets:
-    st.error("OPENAI_API_KEY가 Secrets에 없습니다. Streamlit Cloud > Secrets 설정을 확인하세요.")
-    client = None
-else:
-    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+st.divider()
+# 화면에 가로 구분선 하나 그려주는 함수
+st.subheader("결과 해석 / 지피티 연결하기 (수동)")
 
-def build_gpt_prompt(
-    user_name: str,
-    stress_level: str,
-    stress_score: float,
-    stress_trend: list,
-    dates: list,
-    change_rate: float
-) -> str:
-    return f"""
-너는 스트레스 측정 결과를 사용자가 이해하기 쉬운 한국어로 설명("~입니다."의 문체 사용)하는 도우미야. 
-과장하거나 진단하지 말고, 안전하고 현실적인 조언을 제공해줘. 
+# ChatGPT에 보낼 프롬프트 자동 생성
+trend_str = ", ".join([f"{d}:{v}" for d, v in zip(dates, stress_trend)])
 
-아래 형식으로 답변해줘:
-1) 한 줄 요약(1문장)
-2) 현재 상태 해석(2~3문장)
-3) 추이 해석(2~3문장)
-4) 오늘 할 수 있는 행동 3가지(불릿 3개)
-5) 주의가 필요한 경우(1~2문장)
+prompt_text = f"""
+너는 스트레스 측정 결과를 해석하는 건강 코치야.
+아래 결과를 보고 한국어로 사용자에게 보여줄 내용을 작성해줘.
 
 [사용자]
 이름: {user_name}
 
-[결과]
-스트레스 레벨: {stress_level}
-스트레스 점수(SI): {stress_score} (범위 0~1500)
-최근 5회 추이: {list(zip(dates, stress_trend))}
-평균 대비 변화율: {change_rate:.1f}%
+[현재 결과]
+stress_level: {stress_level}
+stress_score: {stress_score} (0~1500)
+
+[최근 추이(5회)]
+{trend_str}
+
+[요구사항]
+1) '한줄 조언' 1줄 (친근한 말투)
+2) '결과 해석' 3~5줄 (왜 이렇게 나왔는지, 추이를 포함)
+3) '오늘 추천 루틴' 3개 (각각 1줄, 현실적으로 가능한 행동)
+4) 의료 진단처럼 단정하지 말고, 생활 습관 관점으로 안내해줘.
 """.strip()
 
-# 버튼 스타일
-st.markdown("""
-<style>
-.result-button-wrap {
-    display:flex;
-    justify-content:flex-end;
-}
-</style>
-""", unsafe_allow_html=True)
+# 복사 버튼(클립보드)
+st.caption("1) 아래 프롬프트를 복사해서 ChatGPT(웹/앱)에 붙여넣어. 2) 나온 결과를 다시 아래에 붙여넣으면 돼.")
+st.text_area("ChatGPT에 붙여넣을 프롬프트", value=prompt_text, height=260, key="prompt_box")
 
-
-st.markdown("<div class='result-button-wrap'>", unsafe_allow_html=True)
-run_gpt = st.button("결과 해석 바로가기 ➜")
-st.markdown("</div>", unsafe_allow_html=True)
-
-result_area = st.empty()  # 버튼 눌렀을 때 같은 위치에 결과 표시
-
-# 버튼 눌렀을 때만 GPT 호출
-if run_gpt:
-    if client is None:
-        result_area.error("GPT 해석을 위한 API 키가 설정되지 않았습니다. Secrets를 확인하세요.")
-    else:
-        prompt = build_gpt_prompt(
-            user_name=user_name,
-            stress_level=stress_level,
-            stress_score=stress_score,
-            stress_trend=stress_trend,
-            dates=dates,
-            change_rate=change_rate
+copy_btn_col, _ = st.columns([1, 3])
+with copy_btn_col:
+    if st.button("프롬프트 복사"):
+        # Streamlit에서 클립보드 복사는 JS로 처리
+        st.components.v1.html(
+            f"""
+            <script>
+            const text = {prompt_text!r};
+            navigator.clipboard.writeText(text);
+            </script>
+            """,
+            height=0
         )
+        st.success("복사 완료! ChatGPT에 붙여넣어봐.")
 
-        with st.spinner("결과를 해석 중입니다..."):
-            try:
-                res = client.chat.completions.create(
-                    model="gpt-4.1-mini",
-                    messages=[
-                        {"role": "system", "content": "너는 친절하고 차분한 스트레스 결과 해석 도우미입니다."},
-                        {"role": "user", "content": prompt},
-                    ],
-                    temperature=0.4,
-                )
-                answer = res.choices[0].message.content
-                result_area.markdown("### 📌 결과 해석\n\n" + answer)
-            except Exception as e:
-                result_area.error("GPT 해석 생성 중 오류가 발생했습니다. (API 키/모델/requirements 확인)")
-                result_area.exception(e)
+# ChatGPT 결과 붙여넣기 칸
+gpt_result = st.text_area("ChatGPT 결과 붙여넣기", value=st.session_state.get("gpt_result", ""), height=220, key="gpt_result_box")
+
+apply_col1, apply_col2 = st.columns([1, 3])
+
+with apply_col1:
+    if st.button("이 결과를 화면에 적용"):
+        st.session_state["gpt_result"] = gpt_result
+
+        # '한줄 조언'만 뽑아서 위 박스에 반영하고 싶으면 아주 단순하게 1줄만 추출(첫 줄 사용)
+        # (정교한 파싱은 GPT 포맷을 강제해야 가능)
+        first_line = (gpt_result.strip().splitlines()[0] if gpt_result.strip() else "")
+        if first_line:
+            # "한줄 조언: ..." 형태면 콜론 뒤만
+            if ":" in first_line:
+                st.session_state["advice_msg"] = first_line.split(":", 1)[1].strip()
+            else:
+                st.session_state["advice_msg"] = first_line.strip()
+        st.success("적용했어! 위 한줄 조언이 바뀌었는지 확인해봐.")
+
+with apply_col2:
+    st.markdown("적용하면 **맨 위 ‘한줄 조언’ 박스**가 ChatGPT 결과(첫 줄)로 바뀌어.")
+
+# 결과 해석 영역(그대로 표시)
+if st.session_state.get("gpt_result"):
+    st.markdown("### 상세 해석 (ChatGPT 결과)")
+    st.markdown(
+        f"""
+        <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; padding:14px;">
+        <pre style="white-space:pre-wrap; margin:0;">{st.session_state["gpt_result"]}</pre>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
