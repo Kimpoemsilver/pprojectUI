@@ -276,34 +276,9 @@ st.text_area("ChatGPT에 붙여넣을 프롬프트", value=prompt_text, height=2
 # ChatGPT 결과 붙여넣기 칸
 gpt_result = st.text_area("ChatGPT 결과 붙여넣기", value=st.session_state.get("gpt_result", ""), height=220, key="gpt_result_box")
 
-apply_col1, apply_col2 = st.columns([1, 3])
+right_col1, left_col2 = st.columns([1, 3])
 
-with apply_col1:
-    if st.button("이 결과를 화면에 적용"):
+with right_col1:
+    if st.button("저장"):
         st.session_state["gpt_result"] = gpt_result
-
-        # '한줄 조언'만 뽑아서 위 박스에 반영하고 싶으면 아주 단순하게 1줄만 추출(첫 줄 사용)
-        # (정교한 파싱은 GPT 포맷을 강제해야 가능)
-        first_line = (gpt_result.strip().splitlines()[0] if gpt_result.strip() else "")
-        if first_line:
-            # "한줄 조언: ..." 형태면 콜론 뒤만
-            if ":" in first_line:
-                st.session_state["advice_msg"] = first_line.split(":", 1)[1].strip()
-            else:
-                st.session_state["advice_msg"] = first_line.strip()
-        st.success("적용했어! 위 한줄 조언이 바뀌었는지 확인해봐.")
-
-with apply_col2:
-    st.markdown("적용하면 **맨 위 ‘한줄 조언’ 박스**가 ChatGPT 결과(첫 줄)로 바뀌어.")
-
-# 결과 해석 영역(그대로 표시)
-if st.session_state.get("gpt_result"):
-    st.markdown("### 상세 해석 (ChatGPT 결과)")
-    st.markdown(
-        f"""
-        <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; padding:14px;">
-        <pre style="white-space:pre-wrap; margin:0;">{st.session_state["gpt_result"]}</pre>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+        st.success("결과가 저장되었습니다.")
