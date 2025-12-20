@@ -243,14 +243,13 @@ with stat_col:
 # 결과 해석 링크 / 지피티 연결하기
 st.divider()
 # 화면에 가로 구분선 하나 그려주는 함수
-st.subheader("결과 해석 / 지피티 연결하기 (수동)")
+st.subheader("ChatGPT로 결과 해석하기")
 
 # ChatGPT에 보낼 프롬프트 자동 생성
 trend_str = ", ".join([f"{d}:{v}" for d, v in zip(dates, stress_trend)])
 
 prompt_text = f"""
-너는 스트레스 측정 결과를 해석하는 건강 코치야.
-아래 결과를 보고 한국어로 사용자에게 보여줄 내용을 작성해줘.
+아래 결과를 보고 출력 형식에 맞춰 한국어로 사용자에게 보여줄 내용을 작성해주세요.
 
 [사용자]
 이름: {user_name}
@@ -262,31 +261,17 @@ stress_score: {stress_score} (0~1500)
 [최근 추이(5회)]
 {trend_str}
 
-[요구사항]
-1) '한줄 조언' 1줄 (친근한 말투)
-2) '결과 해석' 3~5줄 (왜 이렇게 나왔는지, 추이를 포함)
-3) '오늘 추천 루틴' 3개 (각각 1줄, 현실적으로 가능한 행동)
-4) 의료 진단처럼 단정하지 말고, 생활 습관 관점으로 안내해줘.
+[출력 형식]
+1) 한줄 요약 (1문장)
+2) 결과 해석 (3~5문장)
+3) 최근 추이에 대한 설명 (2~3문장)
+4) 오늘 추천 행동 3가지 (각각 1문장, 현실적으로 바로 할 수 있는 것)
 """.strip()
 
 # 복사 버튼(클립보드)
-st.caption("1) 아래 프롬프트를 복사해서 ChatGPT(웹/앱)에 붙여넣어. 2) 나온 결과를 다시 아래에 붙여넣으면 돼.")
+st.caption("아래 프롬프트를 복사해서 ChatGPT(웹/앱)에 붙여넣어 주세요. ")
 st.text_area("ChatGPT에 붙여넣을 프롬프트", value=prompt_text, height=260, key="prompt_box")
 
-copy_btn_col, _ = st.columns([1, 3])
-with copy_btn_col:
-    if st.button("프롬프트 복사"):
-        # Streamlit에서 클립보드 복사는 JS로 처리
-        st.components.v1.html(
-            f"""
-            <script>
-            const text = {prompt_text!r};
-            navigator.clipboard.writeText(text);
-            </script>
-            """,
-            height=0
-        )
-        st.success("복사 완료! ChatGPT에 붙여넣어봐.")
 
 # ChatGPT 결과 붙여넣기 칸
 gpt_result = st.text_area("ChatGPT 결과 붙여넣기", value=st.session_state.get("gpt_result", ""), height=220, key="gpt_result_box")
